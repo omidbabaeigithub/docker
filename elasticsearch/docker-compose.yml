@@ -7,7 +7,33 @@ volumes:
             type: none
             o: bind
             device: /var/sharedDir/volumes/elasticsearch/data
+    kibana-config:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: /var/sharedDir/volumes/kibana/config/
+    # logstash-pipeline:
+    #     driver: local
+    #     driver_opts:
+    #         type: none
+    #         o: bind
+    #         device: /var/sharedDir/volumes/logstash/pipeline
+    # logstash-config:
+    #     driver: local
+    #     driver_opts:
+    #         type: none
+    #         o: bind
+    #         device: /var/sharedDir/volumes/logstash/config/logstash.yml
 
+    logstash-vol:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: /var/sharedDir/volumes/logstash
+
+            
 
 services:  
   elasticsearch:
@@ -75,7 +101,7 @@ services:
       mode: replicated
       replicas: 1
     volumes:
-        - ./kibana/config/:/usr/share/kibana/config:ro
+        - kibana-config:/usr/share/kibana/config:ro
     depends_on: 
         - elasticsearch
       
@@ -97,8 +123,9 @@ services:
     networks:
       - elk
     volumes:
-        - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
-        - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+#        - logstash-config:/usr/share/logstash/config/logstash.yml:ro
+#        - logstash-pipeline:/usr/share/logstash/pipeline:ro
+        - logstash-vol:/usr/share/logstash:ro
     deploy:
       mode: replicated 
       replicas: 1
