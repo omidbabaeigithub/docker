@@ -1,12 +1,12 @@
 version: '3.7'  
 
-# volumes:
-#     elasticsearch-data:
-#         driver: local
-#         driver_opts:
-#             type: none
-#             o: bind
-#             device: /var/sharedDir/volumes/elasticsearch/data
+volumes:
+    elasticsearch-data:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: /var/sharedDir/volumes/elasticsearch/data
 #     kibana-config:
 #         driver: local
 #         driver_opts:
@@ -67,9 +67,10 @@ services:
         #-E,node.name=hostname,
         #-E,path.data=/usr/local/elasticsearch/data", 
         #-E,path.logs=/usr/local/elasticsearch/logs"
+        #to scale Elasticsearch in Swarm mode, configure zen to use the DNS name tasks.elasticsearch instead of elasticsearch
         ]
-    # volumes: 
-    #     - elasticsearch-data:/usr/share/elasticsearch/data
+    volumes: 
+         - elasticsearch-data:/usr/share/elasticsearch/data
     configs:
       - source: elastic_config
         target: /usr/share/elasticsearch/config/elasticsearch.yml
@@ -110,6 +111,8 @@ services:
   logstash:
     image: logstash:6.5.4
     hostname: logstash
+    # environment:
+        # LS_JAVA_OPTS: "-Xmx1g -Xms1g"
 #    command: sh -c "logstash -e 'input { syslog  { type => syslog port => 10514   } gelf { } } output { stdout { codec => rubydebug } elasticsearch { hosts => [ \"elasticsearch\" ] } }'"
     ports:
 #        - "10514:10514/tcp"
