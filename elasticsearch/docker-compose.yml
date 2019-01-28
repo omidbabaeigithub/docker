@@ -1,39 +1,52 @@
 version: '3.7'  
 
-volumes:
-    elasticsearch-data:
-        driver: local
-        driver_opts:
-            type: none
-            o: bind
-            device: /var/sharedDir/volumes/elasticsearch/data
-    kibana-config:
-        driver: local
-        driver_opts:
-            type: none
-            o: bind
-            device: /var/sharedDir/volumes/kibana/config/
-    # logstash-pipeline:
-    #     driver: local
-    #     driver_opts:
-    #         type: none
-    #         o: bind
-    #         device: /var/sharedDir/volumes/logstash/pipeline
-    # logstash-config:
-    #     driver: local
-    #     driver_opts:
-    #         type: none
-    #         o: bind
-    #         device: /var/sharedDir/volumes/logstash/config/logstash.yml
+# volumes:
+#     elasticsearch-data:
+#         driver: local
+#         driver_opts:
+#             type: none
+#             o: bind
+#             device: /var/sharedDir/volumes/elasticsearch/data
+#     kibana-config:
+#         driver: local
+#         driver_opts:
+#             type: none
+#             o: bind
+#             device: /var/sharedDir/volumes/kibana/config/
+#     # logstash-pipeline:
+#     #     driver: local
+#     #     driver_opts:
+#     #         type: none
+#     #         o: bind
+#     #         device: /var/sharedDir/volumes/logstash/pipeline
+#     # logstash-config:
+#     #     driver: local
+#     #     driver_opts:
+#     #         type: none
+#     #         o: bind
+#     #         device: /var/sharedDir/volumes/logstash/config/logstash.yml
 
-    logstash-vol:
-        driver: local
-        driver_opts:
-            type: none
-            o: bind
-            device: /var/sharedDir/volumes/logstash
+#     logstash-vol:
+#         driver: local
+#         driver_opts:
+#             type: none
+#             o: bind
+#             device: /var/sharedDir/volumes/logstash
 
+configs:
+  elastic_config:
+    file: ./elasticsearch/config/elasticsearch.yml
+  logstash_config:
+    file: ./logstash/config/logstash.yml
+  logstash_pipeline:
+    file: ./logstash/pipeline/logstash.conf
+  kibana_config:
+    file: ./kibana/config/kibana.yml
             
+ 
+networks:
+    elk:
+        driver: overlay
 
 services:  
   elasticsearch:
@@ -55,11 +68,14 @@ services:
         #-E,path.data=/usr/local/elasticsearch/data", 
         #-E,path.logs=/usr/local/elasticsearch/logs"
         ]
-    volumes: 
-        - elasticsearch-data:/usr/share/elasticsearch/data
+    # volumes: 
+    #     - elasticsearch-data:/usr/share/elasticsearch/data
+    configs:
+      - source: elastic_config
+        target: /usr/share/elasticsearch/config/elasticsearch.yml
     deploy:
         mode: replicated
-        replicas: 2
+        replicas: 1
 #        mode: global
 #        endpoint_mode: dnsrr
         endpoint_mode: vip
@@ -89,26 +105,7 @@ services:
 #         }
 #       }' | tee /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
 
-  kibana:
-    image: kibana:6.5.4
-    ports:
-      - "5601:5601"
-    environment:
-      ELASTICSEARCH_URL: http://elasticsearch:9200
-    networks:
-      - elk
-    deploy:
-      mode: replicated
-      replicas: 1
-    volumes:
-        - kibana-config:/usr/share/kibana/config:ro
-    depends_on: 
-        - elasticsearch
-      
- #   healthcheck:
- #     test: wget -qO- http://localhost:5601 > /dev/null
- #     interval: 30s
- #     retries: 3
+
 
   logstash:
     image: logstash:6.5.4
@@ -122,15 +119,42 @@ services:
         - "9600:9600"
     networks:
       - elk
-    volumes:
-#        - logstash-config:/usr/share/logstash/config/logstash.yml:ro
-#        - logstash-pipeline:/usr/share/logstash/pipeline:ro
-        - logstash-vol:/usr/share/logstash:ro
+#     volumes:
+# #        - logstash-config:/usr/share/logstash/config/logstash.yml:ro
+# #        - logstash-pipeline:/usr/share/logstash/pipeline:ro
+#         - logstash-vol:/usr/share/logstash:ro
     deploy:
       mode: replicated 
       replicas: 1
     depends_on: 
         - elasticsearch
+    configs:
+      - source: logstash_config
+        target: /usr/share/logstash/config/logstash.yml
+      - source: logstash_pipeline
+        target: /usr/share/logstash/pipeline/logstash.conf
 
-networks:
-    elk:
+
+  kibana:
+    image: kibana:6.5.4
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    networks:
+      - elk
+    deploy:
+      mode: replicated
+      replicas: 1
+    # volumes:
+    #     - kibana-config:/usr/share/kibana/config:ro
+    depends_on: 
+        - elasticsearch
+    configs:
+      - source: kibana_config
+        target: /usr/share/kibana/config/kibana.yml
+      
+ #   healthcheck:
+ #     test: wget -qO- http://localhost:5601 > /dev/null
+ #     interval: 30s
+ #     retries: 3
